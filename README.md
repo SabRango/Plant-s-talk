@@ -1,1 +1,1 @@
-# Plant-s-talk
+# PlantsTalk
