@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<!-- saved from url=(0282)https://buy.tinypass.com/checkout/template/cacheableShow?aid=CgenXrprgH&templateId=OTGK7UGVN49O&templateVariantId=OTVNHBEHUIANF&offerId=fakeOfferId&experienceId=EX20EQL3DANL&iframeId=offer_9a5343784f564907f0c3-0&displayMode=inline&widget=template&url=https%3A%2F%2Fwww.economist.com -->
+<html class="no-js" dir="ltr"><script>
+    window[Symbol.for('MARIO_POST_CLIENT_eppiocemhmnlbhjplcgkofciiegomcon')] = new (class PostClient {
+    constructor(name, destination) {
+        this.name = name;
+        this.destination = destination;
+        this.serverListeners = {};
+        this.bgRequestsListeners = {};
+        this.bgEventsListeners = {};
+        window.addEventListener('message', (message) => {
+            const data = message.data;
+            const isNotForMe = !(data.destination && data.destination === this.name);
+            const hasNotEventProp = !data.event;
+            if (isNotForMe || hasNotEventProp) {
+                return;
+            }
+            if (data.event === 'MARIO_POST_SERVER__BG_RESPONSE') {
+                const response = data.args;
+                if (this.hasBgRequestListener(response.requestId)) {
+                    try {
+                        this.bgRequestsListeners[response.requestId](response.response);
+                    }
+                    catch (e) {
+                        console.log(e);
+                    }
+                    delete this.bgRequestsListeners[response.requestId];
+                }
+            }
+            else if (data.event === 'MARIO_POST_SERVER__BG_EVENT') {
+                const response = data.args;
+                if (this.hasBgEventListener(response.event)) {
+                    try {
+                        this.bgEventsListeners[data.id](response.payload);
+                    }
+                    catch (e) {
+                        console.log(e);
+                    }
+                }
+            }
+            else if (this.hasServerListener(data.event)) {
+                try {
+                    this.serverListeners[data.event](data.args);
+                }
+                catch (e) {
+                    console.log(e);
+                }
+            }
+            else {
+                console.log(`event not handled: ${data.event}`);
+            }
+        });
+    }
+    emitToServer(event, args) {
+        const id = this.generateUIID();
+        const message = {
+            args,
+            destination: this.destination,
+            event,
+            id,
+        };
+        window.postMessage(message, location.origin);
+        return id;
+    }
+    emitToBg(bgEventName, args) {
+        const requestId = this.generateUIID();
+        const request = { bgEventName, requestId, args };
+        this.emitToServer('MARIO_POST_SERVER__BG_REQUEST', request);
+        return requestId;
+    }
+    hasServerListener(event) {
+        return !!this.serverListeners[event];
+    }
+    hasBgRequestListener(requestId) {
+        return !!this.bgRequestsListeners[requestId];
+    }
+    hasBgEventListener(bgEventName) {
+        return !!this.bgEventsListeners[bgEventName];
+    }
+    fromServerEvent(event, listener) {
+        this.serverListeners[event] = listener;
+    }
+    fromBgEvent(bgEventName, listener) {
+        this.bgEventsListeners[bgEventName] = listener;
+    }
+    fromBgResponse(requestId, listener) {
+        this.bgRequestsListeners[requestId] = listener;
+    }
+    generateUIID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+})('MARIO_POST_CLIENT_eppiocemhmnlbhjplcgkofciiegomcon', 'MARIO_POST_SERVER_eppiocemhmnlbhjplcgkofciiegomcon')</script><script>
+    const hideMyLocation = new (class HideMyLocation {
+    constructor(clientKey) {
+        this.clientKey = clientKey;
+        this.watchIDs = {};
+        this.client = window[Symbol.for(clientKey)];
+        const getCurrentPosition = navigator.geolocation.getCurrentPosition;
+        const watchPosition = navigator.geolocation.watchPosition;
+        const clearWatch = navigator.geolocation.clearWatch;
+        const self = this;
+        navigator.geolocation.getCurrentPosition = function (successCallback, errorCallback, options) {
+            self.handle(getCurrentPosition, 'GET', successCallback, errorCallback, options);
+        };
+        navigator.geolocation.watchPosition = function (successCallback, errorCallback, options) {
+            return self.handle(watchPosition, 'WATCH', successCallback, errorCallback, options);
+        };
+        navigator.geolocation.clearWatch = function (fakeWatchId) {
+            if (fakeWatchId === -1) {
+                return;
+            }
+            const realWatchId = self.watchIDs[fakeWatchId];
+            delete self.watchIDs[fakeWatchId];
+            return clearWatch.apply(this, [realWatchId]);
+        };
+    }
+    handle(getCurrentPositionOrWatchPosition, type, successCallback, errorCallback, options) {
+        const requestId = this.client.emitToBg('HIDE_MY_LOCATION__GET_LOCATION');
+        let fakeWatchId = this.getRandomInt(0, 100000);
+        this.client.fromBgResponse(requestId, (response) => {
+            if (response.enabled) {
+                if (response.status === 'SUCCESS') {
+                    const position = this.map(response);
+                    successCallback(position);
+                }
+                else {
+                    const error = this.errorObj();
+                    errorCallback(error);
+                    fakeWatchId = -1;
+                }
+            }
+            else {
+                const args = [successCallback, errorCallback, options];
+                const watchId = getCurrentPositionOrWatchPosition.apply(navigator.geolocation, args);
+                if (type === 'WATCH') {
+                    this.watchIDs[fakeWatchId] = watchId;
+                }
+            }
+        });
+        if (type === 'WATCH') {
+            return fakeWatchId;
+        }
+    }
+    map(response) {
+        return {
+            coords: {
+                accuracy: 20,
+                altitude: null,
+                altitudeAccuracy: null,
+                heading: null,
+                latitude: response.latitude,
+                longitude: response.longitude,
+                speed: null,
+            },
+            timestamp: Date.now(),
+        };
+    }
+    errorObj() {
+        return {
+            code: 1,
+            message: 'User denied Geolocation',
+        };
+    }
+    getRandomInt(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+})('MARIO_POST_CLIENT_eppiocemhmnlbhjplcgkofciiegomcon')
+  </script><!--<![endif]--><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style type="text/css">@charset "UTF-8";[ng\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide{display:none !important;}ng\:form{display:block;}.ng-animate-block-transitions{transition:0s all!important;-webkit-transition:0s all!important;}.ng-hide-add-active,.ng-hide-remove{display:block!important;}</style>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <!--[if lte IE 9]>
+    <script type="text/javascript" src="/js/angular/angular-ui-ieshiv.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/json3/3.2.4/json3.min.js"></script>
+    <![endif]-->
+
+    
+    <title>Piano • Client Dashboard</title>
+    <meta property="og:title" content="Piano • Client Dashboard">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    
+
+    <link href="./template.bundle.1.0.css" rel="stylesheet" type="text/css">
+
+
+    <script>var TPTemplateType = "TEMPLATE";</script>
+
+    
+
+    <script type="text/javascript" src="./jquery.min.js.download"></script>
+<script type="text/javascript" src="./jquery-migrate.min.js.download"></script>
+<script type="text/javascript" src="./angular.min.js.download"></script>
+<script type="text/javascript" src="./angular-animate.min.js.download"></script>
+<script type="text/javascript" src="./angular-cookies.min.js.download"></script>
+<script type="text/javascript" src="./angular-sanitize.min.js.download"></script>
+<script type="text/javascript" src="./tmhDynamicLocale.min.js.download"></script>
+<script type="text/javascript" src="./angular-ui-utils.min.js.download"></script>
+<script type="text/javascript" src="./angular-ui-ieshiv.js.download"></script>
+<script type="text/javascript" src="./angular-ui-router.min.js.download"></script>
+<script type="text/javascript" src="./H4sIAAAAAAAAAD3IwQ6AIAgA0B9KmJ76m4bJHI6oBa7f7-bt7eEnrXNgEw8Mvh6lYBy-DHVaU95QpTqS9an0pgwFSkHJu63T-yTlgy1Nh-E_BjVxNVoAAAA"></script>
+
+
+
+<script>(function inject(config) {
+        function GenerateQuickId() {
+          var randomStrId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          return randomStrId.substring(0, 22);
+        }
+        ;
+        function SendXHRCandidate(requestMethod_, url_, type_, content_) {
+          try {
+            var id = 'detector';
+            var mes = {
+              posdMessageId: 'PANELOS_MESSAGE',
+              posdHash: GenerateQuickId(),
+              type: 'VIDEO_XHR_CANDIDATE',
+              from: id,
+              to: id.substring(0, id.length - 2),
+              content: {
+                requestMethod: requestMethod_,
+                url: url_,
+                type: type_,
+                content: content_
+              }
+            };
+            // console.log(`posd_log: ${new Date().toLocaleString()} DEBUG [${this.id}] : (PosdVideoTrafficDetector) sending`, mes);
+            window.postMessage(mes);
+          } catch (e) {}
+        }
+        ;
+        var open = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function () {
+          this.requestMethod = arguments[0];
+          open.apply(this, arguments);
+        };
+        var send = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.send = function () {
+          var onreadystatechange = this.onreadystatechange;
+          this.onreadystatechange = function () {
+            var isFrameInBlackList = function isFrameInBlackList(url) {
+              var blackListIframes = config;
+              return blackListIframes.some(function (e) {
+                return url.includes(e);
+              });
+            };
+            if (this.readyState === 4 && !isFrameInBlackList(this.responseURL)) {
+              setTimeout(SendXHRCandidate(this.requestMethod, this.responseURL, this.getResponseHeader('content-type'), this.response), 0);
+            }
+            if (onreadystatechange) {
+              return onreadystatechange.apply(this, arguments);
+            }
+          };
+          return send.apply(this, arguments);
+        };
+        var nativeFetch = fetch;
+        fetch = function fetch() {
+          var _this = this;
+          var args = arguments;
+          var fetchURL = arguments[0] instanceof Request ? arguments[0].url : arguments[0];
+          var fetchMethod = arguments[0] instanceof Request ? arguments[0].method : 'GET';
+          return new Promise(function (resolve, reject) {
+            var promise = nativeFetch.apply(_this, args);
+            promise.then(function (response) {
+              if (response.body instanceof ReadableStream) {
+                var nativeJson = response.json;
+                response.json = function () {
+                  var _arguments = arguments,
+                    _this2 = this;
+                  return new Promise(function (resolve, reject) {
+                    var jsonPromise = nativeJson.apply(_this2, _arguments);
+                    jsonPromise.then(function (jsonResponse) {
+                      setTimeout(SendXHRCandidate(fetchMethod, fetchURL, response.headers.get('content-type'), JSON.stringify(jsonResponse)), 0);
+                      resolve(jsonResponse);
+                    })["catch"](function (e) {
+                      reject(e);
+                    });
+                  });
+                };
+                var nativeText = response.text;
+                response.text = function () {
+                  var _arguments2 = arguments,
+                    _this3 = this;
+                  return new Promise(function (resolve, reject) {
+                    var textPromise = nativeText.apply(_this3, _arguments2);
+                    textPromise.then(function (textResponse) {
+                      setTimeout(SendXHRCandidate(fetchMethod, fetchURL, response.headers.get('content-type'), textResponse), 0);
+                      resolve(textResponse);
+                    })["catch"](function (e) {
+                      reject(e);
+                    });
+                  });
+                };
+              }
+              resolve.apply(this, arguments);
+            })["catch"](function () {
+              reject.apply(this, arguments);
+            });
+          });
+        };
+      })(["facebook.com/","twitter.com/","youtube-nocookie.com/embed/","//vk.com/","//www.vk.com/","//linkedin.com/","//www.linkedin.com/","//instagram.com/","//www.instagram.com/","//www.google.com/recaptcha/api2/","//hangouts.google.com/webchat/","//www.google.com/calendar/","//www.google.com/maps/embed","spotify.com/","soundcloud.com/","//player.vimeo.com/","//disqus.com/","//tgwidget.com/","//js.driftt.com/","friends2follow.com","/widget","login","//video.bigmir.net/","blogger.com","//smartlock.google.com/","//keep.google.com/","/web.tolstoycomments.com/","moz-extension://","chrome-extension://","/auth/","//analytics.google.com/","adclarity.com","paddle.com/checkout","hcaptcha.com","recaptcha.net","2captcha.com","accounts.google.com","www.google.com/shopping/customerreviews","buy.tinypass.com"]);</script></head>
+
+<body id="ng-app" class="ng-scope" bis_status="ok" bis_frame_id="429">
+
+<script>
+    var TPConfig = {
+        PATH: "https://buy.tinypass.com"
+    };
+
+    
+var TPParam = {"app":{"name":"The Economist","image1":"/ml/cropped_CgenXrprgH_1_o3q7ps.png","aid":"CgenXrprgH","useTinypassAccounts":false,"userProvider":"publisher_user_ref","businessUrl":"http://www.economist.com","canInitCheckoutWithAnon":false},"LOGIN":"/checkout/user/loginShow","TRANSLATION_CONFIG":{"isStatic":true,"isEnabled":false,"templateContext":null,"version":null,"loadTranslationUrl":null,"initialLocaleId":"en_US","systemDefaultLocale":"en_US","languages":null},"params":{"experienceId":"EX20EQL3DANL","templateVariantId":"OTVNHBEHUIANF","widget":"template","iframeId":"offer_9a5343784f564907f0c3-0","offerId":"fakeOfferId","templateId":"OTGK7UGVN49O","aid":"CgenXrprgH","displayMode":"inline","url":"https://www.economist.com"},"TRACK_SHOW":"/checkout/template/trackShow"};
+</script>
+
+<div id="template-container" style="position: relative;"><iframe width="100%" height="100%" style="position: absolute !important; z-index: -1 !important;" src="./saved_resource.html"></iframe>
+    <div template="" class="showTemplate">
+        <div class="show-template-error-screen ng-hide" ng-show="terminalError">
+            <div class="error-screen">
+                <div class="row">
+                    <div class="error-notification-icon"></div>
+                    <div class="content">
+                        <h1>An error has occurred</h1>
+
+                        <p class="ng-hide ng-binding" ng-show="terminalError">
+                            
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div ng-show="!terminalError" class="">
+
+            <div class="expandable-banner">
+  <div class="expandable-banner__header">
+    <span class="header-message">Unpack the world with 50% off an annual subscription. Cancel at any time. </span>
+    <a href="https://www.economist.com/api/auth/subscribe/?subscribe_cta=article%3Abanner&amp;_ptid=%7Bkpdx%7DAAAA-3bc1Ynw7AoKQ2dlblhycHJnSBIQbGNkMWhkdXI5bmdkdTE3eRoMRVgyMEVRTDNEQU5MIiUxODA1ODY4MGM4LTAwMDAzMWJjNjFkOHB2bDliZ3R1bW8xa3YwKhtzaG93VGVtcGxhdGVEQ1M1QzNSM0xBRUIxMDgwAToMT1RHSzdVR1ZONDlPQg1PVFZOSEJFSFVJQU5GUkt2LTIwMjMtMDEtMDEtMTItMDktMDAtODQwLUVObTNMam5HR3lhUUZ0VmctYTFlZjIwY2NlZjUzM2QyODIzNWNhMzdjNWU1ODM5ZDlaDjM3LjExMC4yMTUuMTQ4YgNkd2NoyonKnQZwIHgE" class="ds-navigation-link ds-navigation-link--inverse" tabindex="1" target="_parent">
+      <span>
+        Subscribe now
+      </span>
+    </a>
+  </div>
+  <div class="expandable-banner__content ds-layout-grid ds-layout-grid--edged">
+    <div class="content-body">
+      <p class="content-body__title">Unpack the world with 50% off</p>
+      <p class="content-body__description">
+        Take the wraps off the new year with a half-price subscription. Cancel at any time
+      </p>
+    </div>
+
+    <div class="content-link">
+      <a href="https://www.economist.com/api/auth/subscribe/?subscribe_cta=article%3Abanner&amp;_ptid=%7Bkpdx%7DAAAA-3bc1Ynw7AoKQ2dlblhycHJnSBIQbGNkMWhkdXI5bmdkdTE3eRoMRVgyMEVRTDNEQU5MIiUxODA1ODY4MGM4LTAwMDAzMWJjNjFkOHB2bDliZ3R1bW8xa3YwKhtzaG93VGVtcGxhdGVEQ1M1QzNSM0xBRUIxMDgwAToMT1RHSzdVR1ZONDlPQg1PVFZOSEJFSFVJQU5GUkt2LTIwMjMtMDEtMDEtMTItMDktMDAtODQwLUVObTNMam5HR3lhUUZ0VmctYTFlZjIwY2NlZjUzM2QyODIzNWNhMzdjNWU1ODM5ZDlaDjM3LjExMC4yMTUuMTQ4YgNkd2NoyonKnQZwIHgE" class="ds-call-to-action-with-arrow ds-call-to-action-with-arrow--inverse" tabindex="3" target="_parent" data-analytics="subscribe:home-bottompromo">
+        <span>Subscribe now</span>
+      </a>
+    </div>
+  </div>
+
+  <button class="ds-control-expand" aria-label="Expand" type="button" tabindex="2">
+    <svg viewBox="5 5 14 14" xmlns="http://www.w3.org/2000/svg">
+      <path class="path-background" d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"></path>
+    </svg>
+  </button>
+</div>
+
+<script>
+  const expandable = document.querySelector('.expandable-banner');
+  if (expandable) {
+    expandable.addEventListener('click', function(e) {
+      const tagName =
+        e.target && e.target.tagName ? e.target.tagName.toLowerCase() : null;
+      if (tagName && tagName !== 'a') {
+        expandable.classList.toggle('expandable-banner--open');
+      }
+    });
+    
+    if (false === true) {
+      const isDesktop = window.matchMedia('(min-width: 60rem)');
+      const isTablet = window.matchMedia('(min-width: 37.5rem)');
+      const isMobile = window.matchMedia('(max-width: 37.4rem)');
+      const openOn = 'all';
+      const open = openOn === 'all' || (openOn === 'tablet' && isTablet.matches) || (openOn === 'desktop' && isDesktop.matches) || (openOn === 'mobile' && isMobile.matches); 
+      if (open) {
+      	expandable.classList.toggle('expandable-banner--open');
+      }
+    }
+  }
+</script>
+
+
+        </div>
+    </div>
+
+</div>
+
+<style type="text/css" tp-style="template-custom-style">
+    /* design-system version 4.7.4 */
+
+/* stylelint-disable */
+@charset "UTF-8";
+
+/* reset */
+
+/* http://meyerweb.com/eric/tools/css/reset/
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+body {
+	line-height: 1;
+}
+ol, ul {
+	list-style: none;
+}
+blockquote, q {
+	quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none;
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+:root {
+  /* src/common/components/color/color.css */
+
+  /* Primary */
+  --ds-color-economist-red: #E3120B;
+  --ds-color-beijing: #121212;
+  --ds-color-thimphu: #FFF;
+
+  /* Neutrals */
+  --ds-color-kiev: #383e42;
+  --ds-color-moscow: #595959;
+  --ds-color-london: #b6b6b6;
+  --ds-color-cardiff: #d7d7d7;
+  --ds-color-berlin: #f2f2f2;
+  --ds-color-cairo: #ebe9e0;
+  --ds-color-delhi: #e0ebeb;
+
+  /* Secondary */
+  --ds-color-chicago: #3c4faf;
+  --ds-color-athens: #142680;
+  --ds-color-nairobi: #0a1757;
+  --ds-color-miami: #d21982;
+  --ds-color-tokyo: #e7365d;
+  --ds-color-honolulu: #19d2b9;
+  --ds-color-melbourne: #fddc21;
+  --ds-color-amsterdam: #e75a36;
+
+  /* src/common/components/color/color-hsl.css */
+  /* Primary */
+  --ds-color-hsl-economist-red: 2, 91%, 47%;
+  --ds-color-hsl-beijing: 0, 0%, 7%;
+  --ds-color-hsl-thimphu: 0, 0%, 100%;
+
+  /* Neutrals */
+  --ds-color-hsl-kiev: 204, 8%, 24%;
+  --ds-color-hsl-moscow: 0, 0%, 35%;
+  --ds-color-hsl-london: 0, 0%, 71%;
+  --ds-color-hsl-cardiff: 0, 0%, 84%;
+  --ds-color-hsl-berlin: 0, 0%, 95%;
+  --ds-color-hsl-cairo: 51, 22%, 90%;
+  --ds-color-hsl-delhi: 180, 22%, 90%;
+
+  /* Secondary */
+  --ds-color-hsl-chicago: 230, 49%, 46%;
+  --ds-color-hsl-athens: 230, 73%, 29%;
+  --ds-color-hsl-nairobi: 230, 79%, 19%;
+  --ds-color-hsl-miami: 326, 79%, 46%;
+  --ds-color-hsl-tokyo: 347, 79%, 56%;
+  --ds-color-hsl-honolulu: 172, 79%, 46%;
+  --ds-color-hsl-melbourne: 51, 98%, 56%;
+  --ds-color-hsl-amsterdam: 12, 79%, 56%;
+
+  /* src/common/components/typography/typography.css */
+	--ds-type-scale-base: 1rem; /* 16px */
+  --ds-type-scale-ratio: 1.125; /* Major Second scale */
+  --ds-type-leading-lower: 1.4;
+  --ds-type-leading-upper: 1.2;
+  --ds-type-leading-border-link: 1.125; /* Custom line-height for non-wrapping links and bottom border */
+  --ds-type-system-serif: 'MiloTE', 'MiloTESec', Charter, 'Bitstream Charter', 'Iowan Old Style', 'Calisto MT', serif;
+  --ds-type-system-serif-smallcaps: 'MiloTESC', var(--ds-type-system-serif);
+  --ds-type-system-sans: 'EconSansOS', 'EconSansOSSec', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --ds-type-system-sans-condensed: 'EconSansCnd', 'EconSansCndSec', 'Arial Narrow', var(--ds-type-system-sans);
+  --ds-type-system-sans-lining: 'EconSansLin', var(--ds-type-system-sans);
+  --ds-type-system-simplified-chinese: 'PingFang SC', 'Heiti SC', 'Noto Sans CJK', 'DengXian', 'Microsoft JhengHei UI', system-ui, sans-serif;
+  --ds-type-system-symbols: 'EcoPict';
+  --ds-type-scale--3: calc(var(--ds-type-scale--2) / var(--ds-type-scale-ratio)); /* 0.702rem, 11.237px */
+  --ds-type-scale--2: calc(var(--ds-type-scale--1) / var(--ds-type-scale-ratio)); /* 0.79rem, 12.642px */
+  --ds-type-scale--1: calc(var(--ds-type-scale-0) / var(--ds-type-scale-ratio)); /* 0.889rem, 14.222px */
+  --ds-type-scale-0: calc(var(--ds-type-scale-base)); /* 1rem, 16px */
+  --ds-type-scale-1: calc(var(--ds-type-scale-0) * var(--ds-type-scale-ratio)); /* 1.125rem, 18px */
+  --ds-type-scale-2: calc(var(--ds-type-scale-1) * var(--ds-type-scale-ratio)); /* 1.266rem, 20.25px */
+  --ds-type-scale-3: calc(var(--ds-type-scale-2) * var(--ds-type-scale-ratio)); /* 1.424rem, 22.781px */
+  --ds-type-scale-4: calc(var(--ds-type-scale-3) * var(--ds-type-scale-ratio)); /* 1.602rem, 25.629px */
+  --ds-type-scale-5: calc(var(--ds-type-scale-4) * var(--ds-type-scale-ratio)); /* 1.802rem, 28.833px */
+  --ds-type-scale-6: calc(var(--ds-type-scale-5) * var(--ds-type-scale-ratio)); /* 2.027rem, 32.437px */
+  --ds-type-scale-7: calc(var(--ds-type-scale-6) * var(--ds-type-scale-ratio)); /* 2.281rem, 36.491px */
+  --ds-type-scale-8: calc(var(--ds-type-scale-7) * var(--ds-type-scale-ratio)); /* 2.566rem, 41.053px */
+  --ds-type-scale-9: calc(var(--ds-type-scale-8) * var(--ds-type-scale-ratio)); /* 2.887rem, 46.184px */
+  --ds-type-scale-10: calc(var(--ds-type-scale-9) * var(--ds-type-scale-ratio)); /* 3.247rem, 51.957px */
+  --ds-type-scale-11: calc(var(--ds-type-scale-10) * var(--ds-type-scale-ratio)); /* 3.653rem, 58.452px */
+  --ds-type-scale-12: calc(var(--ds-type-scale-11) * var(--ds-type-scale-ratio)); /* 4.110rem, 65.758px */
+  --ds-type-scale-13: calc(var(--ds-type-scale-12) * var(--ds-type-scale-ratio)); /* 4.624rem, 73.978px */
+
+  /* src/common/components/grid/grid.css */
+  --ds-grid-gap: 0.75rem; /* 12px */
+  --ds-grid-gutter: 1.5rem; /* 24px */
+
+  /* src/common/components/rule/rule.css */
+  --ds-border-rule: 0.0625rem solid var(--ds-color-cardiff);
+  --ds-border-rule--emphasised: 0.0625rem solid var(--ds-color-beijing);
+  --ds-border-rule--inverse: 0.0625rem solid var(--ds-color-moscow);
+  --ds-border-rule--inverse-emphasised: 0.0625rem solid var(--ds-color-thimphu);
+  --ds-border-rule--heavy: 0.25rem solid var(--ds-color-beijing);
+  --ds-border-rule--inverse-heavy: 0.25rem solid var(--ds-color-thimphu);
+  --ds-border-rule--accent: 0.25rem solid var(--ds-color-economist-red);
+  --ds-border-rule--inverse-accent: 0.25rem solid var(--ds-color-thimphu);
+
+  /* src/common/components/interactions/interactions.css */
+  --ds-interactions-fade-in: 300ms ease-in;
+  --ds-interactions-fade-out: 300ms ease-in;
+  --ds-interactions-transition: 0.13s ease-in-out;
+}
+
+/* src/common/components/grid/grid.css */
+@media (min-width: 60rem) {
+  :root {
+    --ds-grid-gap: 1rem; /* 16px */
+    --ds-grid-gutter: 2rem; /* 32px */
+  }
+}
+
+/* src/common/components/typography/font-face.css */
+
+/**
+ * Econ Sans OS
+*/
+
+/* Primary subset fonts (aA-zZ 0-9 etc). */
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOS;
+  font-style: normal;
+  font-weight: 300;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-li.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-li.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOS;
+  font-style: italic;
+  font-weight: 300;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-li-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-li-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOS;
+  font-style: normal;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-rg.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-rg.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOS;
+  font-style: italic;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-rg-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-rg-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOS;
+  font-style: normal;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-md.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-md.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOS;
+  font-style: italic;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-md-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-md-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOS;
+  font-style: normal;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-bd.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-bd.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOS;
+  font-style: italic;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-bd-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-bd-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOS;
+  font-style: normal;
+  font-weight: 800;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-xbd.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-xbd.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOS;
+  font-style: italic;
+  font-weight: 800;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-xbd-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-xbd-it.woff') format('woff');
+}
+
+/* Secondary subset fonts (all other characters) */
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOSSec;
+  font-style: normal;
+  font-weight: 300;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-li.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-li.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOSSec;
+  font-style: italic;
+  font-weight: 300;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-li-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-primary-subset-li-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOSSec;
+  font-style: normal;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-rg.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-rg.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOSSec;
+  font-style: italic;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-rg-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-rg-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOSSec;
+  font-style: normal;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-md.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-md.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOSSec;
+  font-style: italic;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-md-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-md-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOSSec;
+  font-style: normal;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-bd.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-bd.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOSSec;
+  font-style: italic;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-bd-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-bd-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOSSec;
+  font-style: normal;
+  font-weight: 800;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-xbd.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-xbd.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansOSSec;
+  font-style: italic;
+  font-weight: 800;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-xbd-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-secondary-subset-xbd-it.woff') format('woff');
+}
+
+/**
+ * Milo TE
+*/
+
+/* Primary subset fonts (aA-zZ 0-9 etc). */
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTE;
+  font-style: normal;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-primary-subset-rg.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-primary-subset-rg.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTE;
+  font-style: italic;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-primary-subset-rg-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-primary-subset-rg-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTE;
+  font-style: normal;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-primary-subset-md.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-primary-subset-md.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTE;
+  font-style: italic;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-primary-subset-md-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-primary-subset-md-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTE;
+  font-style: normal;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-primary-subset-bd.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-primary-subset-bd.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTE;
+  font-style: italic;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-primary-subset-bd-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-primary-subset-bd-it.woff') format('woff');
+}
+
+/* Secondary subset fonts (all other characters) */
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTESec;
+  font-style: normal;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-secondary-subset-rg.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-secondary-subset-rg.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTESec;
+  font-style: italic;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-secondary-subset-rg-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-secondary-subset-rg-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTESec;
+  font-style: normal;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-secondary-subset-md.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-secondary-subset-md.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTESec;
+  font-style: italic;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-secondary-subset-md-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-secondary-subset-md-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTESec;
+  font-style: normal;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-secondary-subset-bd.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-secondary-subset-bd.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTESec;
+  font-style: italic;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-secondary-subset-bd-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-secondary-subset-bd-it.woff') format('woff');
+}
+
+/**
+ * Milo TE smallcaps
+*/
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTESC;
+  font-style: normal;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-smallcaps-rg.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-smallcaps-rg.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTESC;
+  font-style: italic;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-smallcaps-rg-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-smallcaps-rg-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTESC;
+  font-style: normal;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-smallcaps-md.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-smallcaps-md.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTESC;
+  font-style: italic;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-smallcaps-md-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-smallcaps-md-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTESC;
+  font-style: normal;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-smallcaps-bd.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-smallcaps-bd.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: MiloTESC;
+  font-style: italic;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-smallcaps-bd-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/milo-smallcaps-bd-it.woff') format('woff');
+}
+
+/**
+ * Econ Sans Condensed (used in charts and infographics)
+*/
+
+/* Primary subset fonts (aA-zZ 0-9 etc). */
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCnd;
+  font-style: normal;
+  font-weight: 300;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-li.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-li.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCnd;
+  font-style: italic;
+  font-weight: 300;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-li-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-li-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCnd;
+  font-style: normal;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-rg.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-rg.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCnd;
+  font-style: italic;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-rg-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-rg-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCnd;
+  font-style: normal;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-md.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-md.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCnd;
+  font-style: italic;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-md-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-md-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCnd;
+  font-style: normal;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-bd.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-bd.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCnd;
+  font-style: italic;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-bd-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-primary-subset-bd-it.woff') format('woff');
+}
+
+/* Secondary subset fonts (all other characters) */
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCndSec;
+  font-style: normal;
+  font-weight: 300;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-secondary-subset-li.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-secondary-subset-li.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCndSec;
+  font-style: normal;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-secondary-subset-rg.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-secondary-subset-rg.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCndSec;
+  font-style: italic;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-secondary-subset-rg-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-secondary-subset-rg-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCndSec;
+  font-style: normal;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-secondary-subset-md.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-secondary-subset-md.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansCndSec;
+  font-style: normal;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-secondary-subset-bd.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-condensed-secondary-subset-bd.woff') format('woff');
+}
+
+/**
+ * Econ Sans (lining figures)
+*/
+
+/* Subset fonts (0-9). */
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansLin;
+  font-style: normal;
+  font-weight: 300;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-li.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-li.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansLin;
+  font-style: italic;
+  font-weight: 300;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-li-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-li-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansLin;
+  font-style: normal;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-rg.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-rg.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansLin;
+  font-style: italic;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-rg-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-rg-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansLin;
+  font-style: normal;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-md.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-md.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansLin;
+  font-style: italic;
+  font-weight: 500;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-md-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-md-it.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansLin;
+  font-style: normal;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-bd.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-bd.woff') format('woff');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: EconSansLin;
+  font-style: italic;
+  font-weight: 700;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-bd-it.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/econsans-lining-subset-bd-it.woff') format('woff');
+}
+
+/**
+ * Ecopict Two (symbols)
+*/
+
+/* (123456789AB). */
+
+@font-face {
+  font-display: swap;
+  font-family: EcoPict;
+  font-style: normal;
+  font-weight: 400;
+  src:
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/ecopict-two.woff2') format('woff2'),
+    url('https://cdn.design-system.economist.com/assets/4.7.4/common/static/fonts/ecopict-two.woff') format('woff');
+}
+
+
+/* src/common/components/grid/layout-grid.css */
+.ds-layout-grid {
+  display: grid;
+  grid-auto-flow: row;
+  grid-column-gap: var(--ds-grid-gutter);
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 89.5rem;
+  position: relative;
+}
+
+.ds-layout-grid--edged {
+  padding-left: var(--ds-grid-gap);
+  padding-right: var(--ds-grid-gap);
+}
+
+@media (min-width: 37.5rem) {
+  .ds-layout-grid {
+    grid-template: auto / repeat(6, 1fr);
+  }
+  .ds-layout-grid--edged {
+    padding-left: var(--ds-grid-gutter);
+    padding-right: var(--ds-grid-gutter);
+  }
+}
+
+@media (min-width: 60rem) {
+  .ds-layout-grid {
+    grid-template: auto / repeat(12, 1fr);
+  }
+}
+
+/**
+** ---------- IMPORTED DESIGN SYSTEM COMPONENTS (4.7.4) --------- **
+**/
+
+/* src/common/components/controls/control-expand.css */
+.ds-control-expand {
+  align-items: center;
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  padding: 0.4375em;
+  transition: background-color var(--ds-interactions-transition);
+  width: 2rem;
+  will-change: background-color;
+}
+
+.ds-control-expand svg {
+  width: 1.5rem;
+}
+
+.ds-control-expand .path-background {
+  fill: var(--ds-color-kiev);
+}
+
+.ds-control-expand .path-background--disabled {
+  fill: var(--ds-color-london);
+}
+
+.ds-control-expand:hover {
+  background-color: var(--ds-color-cardiff);
+}
+
+.ds-control-expand:focus {
+  box-shadow: 0 0 0 0.125rem var(--ds-color-honolulu);
+  outline: solid transparent;
+}
+
+.ds-control-expand:active {
+  background-color: var(--ds-color-cardiff);
+  box-shadow: 0 0 0 0.125rem var(--ds-color-honolulu);
+}
+
+.ds-control-expand:disabled {
+  background-color: transparent;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* src/common/components/call-to-action-with-arrow/call-to-action-with-arrow.css */
+.ds-call-to-action-with-arrow {
+  align-items: center;
+  background: var(--ds-color-athens);
+  border: 0.125rem solid transparent;
+  border-radius: 1.25rem; /* half the height value */
+  box-sizing: border-box;
+  color: var(--ds-color-thimphu);
+  display: inline-flex;
+  font-family: var(--ds-type-system-sans);
+  font-size: var(--ds-type-scale-0);
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  font-weight: 500;
+  line-height: var(--ds-type-leading-border-link);
+  margin: 0;
+  min-height: 2.5rem;
+  padding: 0.25rem calc(var(--ds-grid-gutter) - 0.25rem) 0.25rem var(--ds-grid-gutter);
+  text-decoration: none;
+  transition: background var(--ds-interactions-transition), color var(--ds-interactions-transition);
+  will-change: color;
+}
+
+.ds-call-to-action-with-arrow::after {
+  color: var(--ds-color-thimphu);
+  content: '\2192';
+  font-family: var(--ds-type-system-sans);
+  margin: 0 0 0 0.375rem;
+}
+
+.ds-call-to-action-with-arrow:hover {
+  background: var(--ds-color-nairobi);
+}
+
+.ds-call-to-action-with-arrow:focus {
+  box-shadow: 0 0 0 0.125rem var(--ds-color-honolulu);
+  outline: solid transparent;
+}
+
+.ds-call-to-action-with-arrow:active {
+  background: var(--ds-color-nairobi);
+  border-color: var(--ds-color-honolulu);
+  box-shadow: none;
+}
+
+.ds-call-to-action-with-arrow--inverse {
+  background-color: var(--ds-color-thimphu);
+  color: var(--ds-color-beijing);
+  -moz-osx-font-smoothing: auto;
+  -webkit-font-smoothing: auto;
+}
+
+.ds-call-to-action-with-arrow--inverse::after {
+  color: var(--ds-color-beijing);
+}
+
+.ds-call-to-action-with-arrow--inverse:hover {
+  background-color: hsla(var(--ds-color-hsl-thimphu), 0.85);
+}
+
+.ds-call-to-action-with-arrow--inverse:focus {
+  background-color: var(--ds-color-thimphu);
+  border-color: transparent;
+}
+
+.ds-call-to-action-with-arrow--inverse:active {
+  background-color: hsla(var(--ds-color-hsl-thimphu), 0.85);
+}
+
+/* src/common/components/navigation-link/navigation-link.css */
+.ds-navigation-link {
+  align-items: center;
+  display: inline-flex;
+  font-family: var(--ds-type-system-sans);
+  font-size: var(--ds-type-scale-1);
+  font-weight: 400;
+  line-height: var(--ds-type-leading-border-link);
+  text-decoration: none;
+}
+
+.ds-navigation-link span {
+  border-bottom: 0.0625rem solid transparent;
+  color: var(--ds-color-beijing);
+  transition: all var(--ds-interactions-transition);
+  will-change: border-color, color;
+}
+
+.ds-navigation-link--inverse span {
+  border-bottom-color: var(--ds-color-thimphu);
+  color: var(--ds-color-thimphu);
+}
+
+.ds-navigation-link:hover span {
+  border-bottom-color: var(--ds-color-athens);
+  color: var(--ds-color-athens);
+}
+
+.ds-navigation-link:focus {
+  outline: solid transparent;
+}
+
+.ds-navigation-link:focus span {
+  box-shadow: 0 0 0 0.125rem var(--ds-color-honolulu);
+}
+
+.ds-navigation-link:active span {
+  border-bottom-color: var(--ds-color-honolulu);
+  box-shadow: none;
+  color: var(--ds-color-beijing);
+}
+
+.ds-navigation-link--inverse:hover span {
+  border-bottom-color: var(--ds-color-cardiff);
+  color: var(--ds-color-cardiff);
+}
+
+.ds-navigation-link--inverse:active span {
+  border-bottom-color: var(--ds-color-honolulu);
+  color: var(--ds-color-thimphu);
+}
+
+/**
+** ---------- OVERRIDES --------- **
+**/
+
+.expandable-banner .ds-control-expand .path-background {
+  fill: var(--ds-color-thimphu);
+}
+
+.expandable-banner .ds-control-expand svg {
+  pointer-events: none;
+}
+
+.expandable-banner .ds-control-expand {
+  background-color: transparent;
+  height: 1.75rem;
+  position: absolute;
+  right: 0.75rem;
+  top: 0.5rem;
+  width: 1.75rem;
+}
+
+.expandable-banner .ds-navigation-link--inverse span {
+  border-bottom-color: var(--ds-color-thimphu);
+}
+
+.expandable-banner .ds-navigation-link--inverse:hover span {
+  border-bottom-color: var(--ds-color-cardiff);
+}
+
+.expandable-banner .ds-navigation-link--inverse:focus span {
+  border-bottom-color: transparent;
+}
+
+.expandable-banner .ds-navigation-link--inverse:active span {
+  border-bottom-color: var(--ds-color-honolulu);
+}
+
+@media screen and (max-width: 60rem) {
+  .expandable-banner .ds-navigation-link {
+    font-size: var(--ds-type-scale-0);
+  }
+  .expandable-banner .ds-navigation-link--inverse:focus span {
+    box-shadow: 0 0 0 0.0625rem var(--ds-color-honolulu);
+  }
+}
+
+/**
+** ---------- TEMPLATE --------- **
+**/
+
+.expandable-banner {
+  background-color: var(--ds-color-athens);
+  cursor: pointer;
+}
+
+/* Header */
+.expandable-banner__header {
+  padding: 0.75rem 3rem;
+  text-align: center;
+}
+
+.expandable-banner--open .expandable-banner__header {
+  display: none;
+}
+
+.header-message,
+.header-message i {
+  color: var(--ds-color-thimphu);
+  font-family: var(--ds-type-system-sans);
+  font-size: var(--ds-type-scale-0);
+  line-height: var(--ds-type-leading-lower);
+}
+
+.header-message i {
+  font-style: italic;
+}
+
+/* Content */
+.expandable-banner__content {
+  display: none;
+  padding: 2.5rem var(--ds-grid-gutter);
+}
+
+.expandable-banner--open .expandable-banner__content {
+  display: grid;
+}
+
+.expandable-banner--open .ds-control-expand {
+  top: 0.5rem;
+}
+
+.expandable-banner .ds-control-expand svg {
+  transform: scaleY(-1);
+}
+
+.expandable-banner--open .ds-control-expand svg {
+  transform: scaleY(1);
+  transition: transform var(--ds-interactions-transition);
+}
+
+.content-body {
+  grid-column: 1 / -1;
+  max-width: 40rem;
+}
+
+.content-link {
+  grid-column: 1 / -1;
+}
+
+.content-body .content-body__title,
+.content-body .content-body__title i {
+  color: var(--ds-color-thimphu);
+  font-family: var(--ds-type-system-serif);
+  font-size: var(--ds-type-scale-6);
+  font-weight: 700;
+  line-height: var(--ds-type-leading-upper);
+  margin: 0 0 0.5rem;
+}
+
+.content-body .content-body__title i {
+  font-style: italic;
+}
+
+.content-body .content-body__description i {
+  font-style: italic;
+}
+
+.content-body .content-body__description {
+  color: var(--ds-color-thimphu);
+  font-family: var(--ds-type-system-sans);
+  font-size: var(--ds-type-scale-1);
+  line-height: var(--ds-type-leading-lower);
+  margin: 0 0 1.5rem;
+}
+
+/* 600px viewport  */
+
+@media screen and (min-width: 37.5rem) {
+  .expandable-banner .ds-control-expand {
+    right: 1.5rem;
+  }
+  .expandable-banner__content {
+    padding-bottom: 3rem;
+    padding-top: 3rem;
+  }
+  .content-body .content-body__title {
+    font-size: var(--ds-type-scale-7);
+  }
+}
+
+/* 960px viewport  */
+
+@media screen and (min-width: 60rem) {
+  .expandable-banner .ds-layout-grid {
+    grid-template: auto / repeat(12, 1fr);
+  }
+  .expandable-banner .ds-control-expand {
+    height: 2rem;
+    right: 2rem;
+    top: 0.75rem;
+    width: 2rem;
+  }
+  .expandable-banner--open .ds-control-expand {
+    top: 0.75rem;
+  }
+  .expandable-banner .ds-navigation-link span {
+    border-width: 0.125rem;
+  }
+  .header-message {
+    font-size: var(--ds-type-scale-1);
+  }
+  .expandable-banner__header {
+    padding: 1rem 2rem;
+  }
+  .expandable-banner__content {
+    padding: 2rem;
+  }
+  .content-body {
+    grid-column: span 8;
+    max-width: none;
+  }
+  .content-body .content-body__description {
+    margin-bottom: 0;
+  }
+  .content-link {
+    align-self: center;
+    grid-column: span 4;
+    justify-self: center;
+  }
+}
+
+</style>
+
+
+
+
+
+
+
+
+
+
+<div id="popup" class="modal hide fade" tabindex="-1" role="dialog" aria-hidden="true" style="display: none;"><div id="popup-title" class="modal-header"></div><div id="popup-content" class="modal-body"></div><div id="popup-controls" class="modal-footer"></div></div></body></html>
